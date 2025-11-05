@@ -1,6 +1,7 @@
 "use client";
 import { cn } from "@/lib/utils";
 import { IconMenu2, IconX } from "@tabler/icons-react";
+import { Activity } from "lucide-react";
 import {
   motion,
   AnimatePresence,
@@ -9,7 +10,6 @@ import {
 } from "motion/react";
 
 import React, { useRef, useState } from "react";
-
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ interface NavBodyProps {
   children: React.ReactNode;
   className?: string;
   visible?: boolean;
+  compact?: boolean;
 }
 
 interface NavItemsProps {
@@ -29,6 +30,7 @@ interface NavItemsProps {
   }[];
   className?: string;
   onItemClick?: () => void;
+  visible?: boolean;
 }
 
 interface MobileNavProps {
@@ -55,90 +57,128 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     target: ref,
     offset: ["start start", "end start"],
   });
-  const [visible, setVisible] = useState<boolean>(false);
+
+  // `scrolled` becomes true once user scrolls down > 40px — controls shrink + blur
+  const [scrolled, setScrolled] = useState<boolean>(false);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 100) {
-      setVisible(true);
-    } else {
-      setVisible(false);
+    if (latest > 40 && !scrolled) {
+      setScrolled(true);
+    } else if (latest <= 40 && scrolled) {
+      setScrolled(false);
     }
   });
 
   return (
     <motion.div
       ref={ref}
-      // IMPORTANT: Change this to class of `fixed` if you want the navbar to be fixed
-      className={cn("sticky inset-x-0 top-20 z-40 w-full", className)}
+      // it's fixed and sits on top; keep some top spacing so it doesn't hug the viewport edge
+      className={cn(
+        "fixed inset-x-0 top-4 z-40 w-full flex items-center justify-center",
+        className
+      )}
+      // animate small layout shift for the container (helps parent spacing)
+      animate={{
+        y: scrolled ? -2 : 0,
+      }}
     >
       {React.Children.map(children, (child) =>
         React.isValidElement(child)
           ? React.cloneElement(
               child as React.ReactElement<{ visible?: boolean }>,
-              { visible },
+              { visible: scrolled }
             )
-          : child,
+          : child
       )}
     </motion.div>
   );
 };
 
+/**
+ * NavBody - desktop navbar container
+ *
+ * Tall by default (1C: cinematic) => ~88px height
+ * When `visible` is true (scrolled), it will shrink to ~64px and increase blur + glass
+ */
 export const NavBody = ({ children, className, visible }: NavBodyProps) => {
+  const tallHeight = 88;
+  const compactHeight = 64;
+
   return (
     <motion.div
       animate={{
-        backdropFilter: visible ? "blur(10px)" : "none",
+        height: visible ? compactHeight : tallHeight,
+        backdropFilter: visible ? "blur(12px) saturate(1.05)" : "blur(6px)",
         boxShadow: visible
-          ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
-          : "none",
-        width: visible ? "40%" : "100%",
-        y: visible ? 20 : 0,
+          ? "0 8px 30px rgba(2,6,23,0.45)"
+          : "0 6px 20px rgba(2,6,23,0.25)",
+        y: visible ? -4 : 0,
       }}
       transition={{
         type: "spring",
-        stiffness: 200,
-        damping: 50,
+        stiffness: 160,
+        damping: 24,
       }}
       style={{
-        minWidth: "800px",
+        minWidth: 320,
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex dark:bg-transparent",
-        visible && "bg-white/80 dark:bg-neutral-950/80",
-        className,
+        // center container with glass-like rounded card
+        "relative mx-auto hidden w-full max-w-7xl items-center justify-between rounded-2xl px-6 py-3 lg:flex",
+        // backdrop + subtle border
+        "bg-white/6 border border-white/6",
+        className
       )}
     >
-      {children}
+      <div
+        // vertical center alignment inside the animated container
+        className="flex w-full items-center justify-between"
+        style={{ gap: 20 }}
+      >
+        {children}
+      </div>
     </motion.div>
   );
 };
 
-export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
+export const NavItems = ({
+  items,
+  className,
+  onItemClick,
+  visible,
+}: NavItemsProps) => {
   const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <motion.div
       onMouseLeave={() => setHovered(null)}
       className={cn(
-        "absolute inset-0 hidden flex-1 flex-row items-center justify-center space-x-2 text-sm font-medium text-zinc-600 transition duration-200 hover:text-zinc-800 lg:flex lg:space-x-2",
-        className,
+        "hidden lg:flex flex-1 items-center justify-center gap-6 text-lg font-medium",
+        className
       )}
     >
       {items.map((item, idx) => (
         <a
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
           key={`link-${idx}`}
           href={item.link}
+          className={cn(
+            "relative px-4 py-2 rounded-full transition-all duration-200",
+            // text styling - slightly translucent white for the glass look
+            "text-white/90"
+          )}
+          aria-label={item.name}
         >
           {hovered === idx && (
             <motion.div
-              layoutId="hovered"
-              className="absolute inset-0 h-full w-full rounded-full bg-gray-100 dark:bg-neutral-800"
+              layoutId="nav-hover"
+              initial={false}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 h-full w-full rounded-full bg-white/8 backdrop-blur-sm"
             />
           )}
-          <span className="relative z-20">{item.name}</span>
+          <span className="relative z-10">{item.name}</span>
         </a>
       ))}
     </motion.div>
@@ -149,25 +189,20 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
   return (
     <motion.div
       animate={{
-        backdropFilter: visible ? "blur(10px)" : "none",
+        backdropFilter: visible ? "blur(10px)" : "blur(6px)",
         boxShadow: visible
-          ? "0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08), 0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset"
-          : "none",
-        width: visible ? "90%" : "100%",
-        paddingRight: visible ? "12px" : "0px",
-        paddingLeft: visible ? "12px" : "0px",
-        borderRadius: visible ? "4px" : "2rem",
-        y: visible ? 20 : 0,
+          ? "0 8px 30px rgba(2,6,23,0.45)"
+          : "0 6px 20px rgba(2,6,23,0.25)",
+        y: visible ? -4 : 0,
       }}
       transition={{
         type: "spring",
-        stiffness: 200,
-        damping: 50,
+        stiffness: 160,
+        damping: 24,
       }}
       className={cn(
-        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden",
-        visible && "bg-white/80 dark:bg-neutral-950/80",
-        className,
+        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between px-4 py-2 lg:hidden",
+        className
       )}
     >
       {children}
@@ -183,7 +218,7 @@ export const MobileNavHeader = ({
     <div
       className={cn(
         "flex w-full flex-row items-center justify-between",
-        className,
+        className
       )}
     >
       {children}
@@ -201,12 +236,13 @@ export const MobileNavMenu = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ type: "spring", stiffness: 200, damping: 22 }}
           className={cn(
-            "absolute inset-x-0 top-16 z-50 flex w-full flex-col items-start justify-start gap-4 rounded-lg bg-white px-4 py-8 shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset] dark:bg-neutral-950",
-            className,
+            "absolute inset-x-4 top-[calc(100%+8px)] z-50 flex w-[calc(100%-32px)] flex-col items-start justify-start gap-4 rounded-xl bg-white/95 px-4 py-6 shadow-lg dark:bg-neutral-950",
+            className
           )}
         >
           {children}
@@ -224,29 +260,41 @@ export const MobileNavToggle = ({
   onClick: () => void;
 }) => {
   return isOpen ? (
-    <IconX className="text-black dark:text-white" onClick={onClick} />
+    <IconX className="text-white w-6 h-6" onClick={onClick} />
   ) : (
-    <IconMenu2 className="text-black dark:text-white" onClick={onClick} />
+    <IconMenu2 className="text-white w-6 h-6" onClick={onClick} />
   );
 };
 
+/**
+ * NavbarLogo - Apple-style larger typography (A3)
+ * Uses system-font stack so Apple devices get SF Pro automatically (F1)
+ */
 export const NavbarLogo = () => {
   return (
     <a
       href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
+      className="relative z-20 mr-6 flex items-center space-x-3 rounded px-2 py-1 text-sm font-normal"
+      style={{
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
+      }}
     >
-      <img
-        src="https://assets.aceternity.com/logo-dark.png"
-        alt="logo"
-        width={30}
-        height={30}
-      />
-      <span className="font-medium text-black dark:text-white">Startup</span>
+      {/* subtle filled icon */}
+      <Activity className="w-7 h-7 text-white/95" />
+      <span
+        className="font-semibold text-2xl leading-none text-white/95"
+        style={{ letterSpacing: 0.2 }}
+      >
+        PulsePredict
+      </span>
     </a>
   );
 };
 
+/**
+ * NavbarButton - primary button is a white pill (3B)
+ */
 export const NavbarButton = ({
   href,
   as: Tag = "a",
@@ -265,15 +313,19 @@ export const NavbarButton = ({
   | React.ComponentPropsWithoutRef<"button">
 )) => {
   const baseStyles =
-    "px-4 py-2 rounded-md bg-white button bg-white text-black text-sm font-bold relative cursor-pointer hover:-translate-y-0.5 transition duration-200 inline-block text-center";
+    "inline-flex items-center justify-center whitespace-nowrap select-none rounded-full px-5 py-2.5 text-sm font-semibold transition transform will-change-transform";
 
-  const variantStyles = {
+  const variantStyles: Record<string, string> = {
     primary:
-      "shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
-    secondary: "bg-transparent shadow-none dark:text-white",
-    dark: "bg-black text-white shadow-[0_0_24px_rgba(34,_42,_53,_0.06),_0_1px_1px_rgba(0,_0,_0,_0.05),_0_0_0_1px_rgba(34,_42,_53,_0.04),_0_0_4px_rgba(34,_42,_53,_0.08),_0_16px_68px_rgba(47,_48,_55,_0.05),_0_1px_0_rgba(255,_255,_255,_0.1)_inset]",
+      // white pill with subtle shadow and slight inner sheen for the "Apple" feel
+      "bg-white text-black shadow-[0_6px_18px_rgba(2,6,23,0.18)]",
+    secondary:
+      // transparent glassy button for secondary actions
+      "bg-white/6 text-white/90 border border-white/8",
+    dark:
+      "bg-black/70 text-white",
     gradient:
-      "bg-gradient-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
+      "bg-gradient-to-r from-sky-500 to-cyan-500 text-white",
   };
 
   return (
@@ -281,6 +333,10 @@ export const NavbarButton = ({
       href={href || undefined}
       className={cn(baseStyles, variantStyles[variant], className)}
       {...props}
+      style={{
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial",
+      }}
     >
       {children}
     </Tag>

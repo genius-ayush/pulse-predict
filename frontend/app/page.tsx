@@ -1,12 +1,11 @@
-import { NavbarDemo } from "@/components/Header";
+import LandingPage from "@/components/Landing/LandingPage";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 export default function Home() {
   return (
-    <div>
-      <NavbarDemo/>
-      <Button>Click Me!</Button>
+    <div className="font-mono">
+      <LandingPage/>
     </div>
   );
 }
