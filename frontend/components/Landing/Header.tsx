@@ -15,6 +15,10 @@ import { useState } from "react";
 export function Header() {
   const navItems = [
     {
+      name: "Markets",
+      link: "/markets",
+    },
+    {
       name: "Features",
       link: "#features",
     },
