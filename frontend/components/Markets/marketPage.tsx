@@ -65,7 +65,7 @@ const Markets = () => {
   return (
     <div className="min-h-screen ">
       {/* Sticky Header with Filters */}
-      <div className="sticky top-0   backdrop-blur-sm border-[#01333f] border-b">
+      <div className="sticky top-14    backdrop-blur-sm border-[#01333f] border-b">
         <div className="w-full max-w-2xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-3 sm:space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

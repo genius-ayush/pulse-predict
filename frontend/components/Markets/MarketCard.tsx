@@ -52,7 +52,7 @@ const MarketCard = ({ market }: MarketCardProps) => {
           </h3>
 
           {/* Price Display - Social Media Style */}
-          <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-3">
+          <div className=" rounded-lg p-3 sm:p-4 space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-1.5 sm:gap-2">
